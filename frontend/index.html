@@ -4,84 +4,154 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deteksi Berita Hoax</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-shield-alt me-2"></i>
-                Deteksi Berita Hoax
-            </a>
-        </div>
-    </nav>
+    <!-- Click Icons with Tags -->
+    <div class="click-icon" id="cursor1">
+        <div class="cursor-tag">FACT</div>
+    </div>
+    <div class="click-icon" id="cursor2">
+        <div class="cursor-tag">HOAX</div>
+    </div>
 
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-lg-8 mx-auto">
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0">
-                            <i class="fas fa-search me-2"></i>
-                            Analisis Berita
-                        </h4>
+    <!-- Selection Box Animation -->
+    <div class="cursor-selection-box" id="cursorSelectionBox"></div>
+
+    <!-- Landing Page -->
+    <div id="landingPage" class="landing-page">
+        <div class="landing-container">
+            <div class="hero-section">
+                <div class="hero-content">
+                    <div class="hero-icon">
+                        <img src="../assets/LOGO1.png" alt="Logo" class="hero-logo">
                     </div>
-                    <div class="card-body">
-                        <form id="newsForm">
-                            <div class="mb-3">
-                                <label for="newsText" class="form-label">Masukkan teks berita yang ingin dianalisis:</label>
-                                <textarea 
-                                    class="form-control" 
-                                    id="newsText" 
-                                    rows="8" 
-                                    placeholder="Paste teks berita di sini..."
-                                    required
-                                ></textarea>
-                            </div>
-                            <button type="button" class="btn btn-primary btn-lg w-100" id="analyzeBtn">
-                                <i class="fas fa-microscope me-2"></i>
-                                Analisis Berita
-                            </button>
-                        </form>
-
-                        <div id="loadingDiv" class="text-center mt-4" style="display: none;">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <p class="mt-2">Menganalisis berita, mencari di sumber terpercaya, dan menyiapkan penjelasan...</p>
-                            <small class="text-muted">Proses ini memerlukan waktu 10-15 detik untuk hasil yang komprehensif</small>
-                        </div>
-
-                        <div id="resultDiv" class="mt-4" style="display: none;"></div>
+                    <h1 class="hero-title">
+                        Deteksi Berita Hoax
+                    </h1>
+                    <p class="hero-subtitle">
+                        Powered by Advanced AI Transformer Models
+                    </p>
+                    <p class="hero-description">
+                        Sistem canggih yang menggunakan BERT dan RoBERTa untuk menganalisis keaslian berita dengan akurasi tinggi
+                    </p>
+                    
+                    <button id="startBtn" class="start-btn">
+                        <i class="fas fa-rocket"></i>
+                        Mulai Analisis
+                    </button>
+                </div>
+            </div>
+            
+            <!-- <div class="features-section">
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <i class="fas fa-brain"></i>
+                        <h3>AI-Powered</h3>
+                        <p>Menggunakan model Transformer terdepan</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-clock"></i>
+                        <h3>Real-time</h3>
+                        <p>Analisis cepat dalam hitungan detik</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>95% Akurat</h3>
+                        <p>Tingkat akurasi tinggi dalam deteksi</p>
                     </div>
                 </div>
+            </div> -->
+        </div>
+    </div>
 
-                <div class="card shadow mt-4">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-history me-2"></i>
-                            Riwayat Analisis
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="historyDiv">
-                            <p class="text-muted">Belum ada riwayat analisis.</p>
+    <!-- Main App -->
+    <div id="mainApp" class="main-container" style="display: none;">
+        <div class="app-header">
+            <button id="backBtn" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1 class="app-title">
+                <img src="../assets/LOGO1.png" alt="Logo" class="app-logo">
+                Deteksi Berita Hoax
+            </h1>
+        </div>
+
+        <div class="main-content">
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="input-container">
+                    <textarea 
+                        id="newsText" 
+                        placeholder="Masukkan teks berita yang ingin dianalisis..."
+                        required
+                    ></textarea>
+                    <button id="analyzeBtn" class="analyze-btn">
+                        <i class="fas fa-microscope"></i>
+                        Analisis Berita
+                    </button>
+                </div>
+
+                <!-- Loading -->
+                <div id="loadingDiv" class="loading-section" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p>Menganalisis dengan AI Models...</p>
+                </div>
+
+                <!-- Result Selection -->
+                <div id="resultSelection" class="result-selection" style="display: none;">
+                    <div class="selection-container">
+                        <div class="selection-box hoax-box" id="hoaxBox">
+                            <div class="selection-content">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <h3>HOAX</h3>
+                                <p>Berita ini terindikasi tidak benar</p>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill hoax-fill" id="hoaxConfidence"></div>
+                                </div>
+                                <span class="confidence-text" id="hoaxPercentage"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="vs-divider">VS</div>
+                        
+                        <div class="selection-box fakta-box" id="faktaBox">
+                            <div class="selection-content">
+                                <i class="fas fa-check-circle"></i>
+                                <h3>FAKTA</h3>
+                                <p>Berita ini terindikasi benar</p>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill fakta-fill" id="faktaConfidence"></div>
+                                </div>
+                                <span class="confidence-text" id="faktaPercentage"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Results Section -->
+            <div class="results-section">
+                <!-- Detailed Results -->
+                <div id="detailedResults" class="detailed-results" style="display: none;">
+                    <div class="result-details">
+                        <h4>Detail Analisis</h4>
+                        <div id="resultContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+            <h4><i class="fas fa-history"></i> Riwayat Analisis</h4>
+            <div id="historyDiv" class="history-content">
+                <p class="empty-history">Belum ada riwayat analisis.</p>
+            </div>
         </div>
     </div>
 
-    <footer class="bg-dark text-white text-center py-3 mt-5">
-        <div class="container">
-            <p class="mb-0">© 2024 Sistem Deteksi Berita Hoax. Dibuat untuk membantu verifikasi kebenaran berita.</p>
-        </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

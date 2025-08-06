@@ -2,37 +2,34 @@ import re
 import nltk
 import pandas as pd
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
 from textblob import TextBlob
 import requests
 from bs4 import BeautifulSoup
 import sqlite3
 from datetime import datetime
-import pickle
 import os
 from real_time_checker import RealTimeNewsChecker
 from news_explainer import NewsExplainer
+from huggingface_detector import HuggingFaceDetector, MultiModelDetector
+import logging
 
 class NewsAnalyzer:
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
-        self.models = {
-            'random_forest': RandomForestClassifier(n_estimators=100, random_state=42),
-            'naive_bayes': MultinomialNB(),
-            'logistic_regression': LogisticRegression(random_state=42)
-        }
-        self.trained = False
         self.trusted_sources = [
             'reuters.com', 'ap.org', 'bbc.com', 'cnn.com', 'npr.org',
             'kompas.com', 'detik.com', 'tempo.co', 'antara.id', 'liputan6.com'
         ]
         self.real_time_checker = RealTimeNewsChecker()
         self.news_explainer = NewsExplainer()
-        self.load_or_train_models()
+        
+        # Initialize Hugging Face models
+        try:
+            logging.info("Initializing Hugging Face models...")
+            self.hf_detector = MultiModelDetector()
+            logging.info("Hugging Face models loaded successfully")
+        except Exception as e:
+            logging.error(f"Failed to load Hugging Face models: {str(e)}")
+            raise Exception(f"Cannot initialize Hugging Face models: {str(e)}")
     
     def preprocess_text(self, text):
         text = text.lower()
@@ -64,88 +61,6 @@ class NewsAnalyzer:
         
         return features
     
-    def generate_training_data(self):
-        # Sample training data - in production, you'd use a larger dataset
-        fake_news = [
-            "BREAKING: Scientists Discover Miracle Cure That Doctors Don't Want You to Know!",
-            "SHOCKING: This One Weird Trick Will Make You Rich Overnight!",
-            "VIRAL: Celebrity Admits to Fake Moon Landing Conspiracy!",
-            "Government Hiding Alien Technology in Area 51, Whistleblower Reveals!",
-            "Doctors Hate This Simple Trick to Lose Weight Fast!",
-            "Breaking: Vaccine Contains Microchips for Mind Control!",
-            "Shocking Discovery: Earth is Actually Flat, Scientists Confirm!",
-            "This Miracle Food Cures Cancer in 24 Hours!"
-        ]
-        
-        real_news = [
-            "The Federal Reserve announced a 0.25% interest rate increase following today's meeting.",
-            "Local authorities report a 15% decrease in traffic accidents after implementing new safety measures.",
-            "The stock market closed mixed today with technology shares leading gains.",
-            "Researchers at the university published findings on climate change impacts in coastal regions.",
-            "The city council approved the new infrastructure budget for road maintenance projects.",
-            "Health officials recommend continued vaccination efforts amid seasonal flu concerns.",
-            "Economic indicators show steady growth in the manufacturing sector this quarter.",
-            "Scientists announce breakthrough in renewable energy storage technology."
-        ]
-        
-        # Create training dataset
-        texts = fake_news + real_news
-        labels = [0] * len(fake_news) + [1] * len(real_news)  # 0 = fake, 1 = real
-        
-        return texts, labels
-    
-    def train_models(self):
-        texts, labels = self.generate_training_data()
-        
-        # Preprocess texts
-        processed_texts = [self.preprocess_text(text) for text in texts]
-        
-        # Vectorize texts
-        X = self.vectorizer.fit_transform(processed_texts)
-        
-        # Train models
-        for name, model in self.models.items():
-            model.fit(X, labels)
-        
-        self.trained = True
-        self.save_models()
-    
-    def save_models(self):
-        model_dir = 'models'
-        os.makedirs(model_dir, exist_ok=True)
-        
-        # Save vectorizer
-        with open(f'{model_dir}/vectorizer.pkl', 'wb') as f:
-            pickle.dump(self.vectorizer, f)
-        
-        # Save models
-        for name, model in self.models.items():
-            with open(f'{model_dir}/{name}.pkl', 'wb') as f:
-                pickle.dump(model, f)
-    
-    def load_models(self):
-        model_dir = 'models'
-        
-        try:
-            # Load vectorizer
-            with open(f'{model_dir}/vectorizer.pkl', 'rb') as f:
-                self.vectorizer = pickle.load(f)
-            
-            # Load models
-            for name in self.models.keys():
-                with open(f'{model_dir}/{name}.pkl', 'rb') as f:
-                    self.models[name] = pickle.load(f)
-            
-            self.trained = True
-            return True
-        except FileNotFoundError:
-            return False
-    
-    def load_or_train_models(self):
-        if not self.load_models():
-            print("Training new models...")
-            self.train_models()
-            print("Models trained and saved.")
     
     def check_trusted_sources(self, text):
         # Simple check for domain mentions
@@ -157,35 +72,28 @@ class NewsAnalyzer:
         return trusted_mentions / len(self.trusted_sources) if self.trusted_sources else 0
     
     def analyze(self, text):
-        if not self.trained:
-            raise Exception("Models not trained")
-        
         print("Starting analysis...")
         
-        # Preprocess text
-        processed_text = self.preprocess_text(text)
+        # Get Hugging Face model predictions
+        print("Getting Hugging Face model predictions...")
+        hf_result = self.hf_detector.predict_ensemble(text)
         
-        # Vectorize
-        X = self.vectorizer.transform([processed_text])
+        if hf_result['prediction'] == 'ERROR':
+            raise Exception(f"Hugging Face prediction failed: {hf_result.get('error', 'Unknown error')}")
         
-        # Get predictions from all models
-        predictions = {}
-        for name, model in self.models.items():
-            pred = model.predict(X)[0]
-            prob = model.predict_proba(X)[0]
-            predictions[name] = {
-                'prediction': 'Real' if pred == 1 else 'Fake',
-                'confidence': max(prob)
+        print(f"Hugging Face prediction: {hf_result['prediction']} (confidence: {hf_result['confidence']:.3f})")
+        
+        # Use Hugging Face results as primary prediction
+        ml_prediction = hf_result['prediction']
+        avg_confidence = hf_result['confidence']
+        
+        # Individual predictions for detailed results
+        predictions = {
+            'huggingface_ensemble': {
+                'prediction': hf_result['prediction'],
+                'confidence': hf_result['confidence']
             }
-        
-        # Ensemble prediction (majority vote)
-        fake_votes = sum(1 for p in predictions.values() if p['prediction'] == 'Fake')
-        real_votes = len(predictions) - fake_votes
-        
-        ml_prediction = 'Real' if real_votes > fake_votes else 'Fake'
-        
-        # Calculate ML confidence
-        avg_confidence = np.mean([p['confidence'] for p in predictions.values()])
+        }
         
         # Check trusted sources (old method)
         trusted_score = self.check_trusted_sources(text)
@@ -272,13 +180,13 @@ class NewsAnalyzer:
         features = self.extract_features(text)
         
         # Determine decision basis
-        decision_basis = "Machine Learning Model"
+        decision_basis = "Hugging Face Transformer Models"
         if verification_weight >= 0.6:
             decision_basis = "Real-time Verification from Trusted Sources"
         elif verification_weight >= 0.4:
             decision_basis = "Fact-checker Verification"
         elif verification_weight >= 0.2:
-            decision_basis = "Combined ML + Source Verification"
+            decision_basis = "Combined Transformer + Source Verification"
         
         result = {
             'prediction': final_prediction,
@@ -293,6 +201,7 @@ class NewsAnalyzer:
             'comprehensive_explanation': explanation,
             'user_explanation': user_explanation,
             'individual_predictions': predictions,
+            'huggingface_details': hf_result,
             'features': features,
             'analysis': {
                 'word_count': features['word_count'],
